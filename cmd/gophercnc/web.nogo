@@ -1,0 +1,113 @@
+package main
+
+import (
+	"context"
+	"database/sql"
+	"net"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	_ "github.com/mattn/go-sqlite3"
+	"github.com/pkg/errors"
+	"github.com/ryanfaerman/gophercnc/web"
+	"github.com/spf13/cobra"
+)
+
+var (
+	webAddr = ":8090"
+
+	cmdWeb = &cobra.Command{
+		Use:   "web",
+		Short: "Run the web server",
+		Args:  cobra.NoArgs,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			db, err := sql.Open("sqlite3", "./foo.db")
+			if err != nil {
+				return errors.Wrap(err, "could not setup database")
+			}
+			defer db.Close()
+
+			s, err := web.NewServer(
+				web.WithLogger(logger),
+				web.WithDatabase(db),
+			)
+			if err != nil {
+				return err
+			}
+
+			l, err := net.Listen("tcp4", webAddr)
+			if err != nil {
+				return errors.Wrap(err, "unable to bind to address")
+			}
+			defer l.Close()
+
+			socket, err := net.Listen("unix", "./tmp/gopher.sock")
+			if err != nil {
+				return errors.Wrap(err, "unable to bind to address")
+			}
+			defer socket.Close()
+
+			if err := s.Start(l); err != nil {
+				logger.WithError(err).Error("could not start")
+				return err
+			}
+
+			if err := s.Start(socket); err != nil {
+				logger.WithError(err).Error("could not start")
+				return err
+			}
+
+			signalCh := make(chan os.Signal, 10)
+			signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGPIPE)
+
+			for {
+				sig := <-signalCh
+
+				switch sig {
+				case syscall.SIGHUP:
+					logger.Info("caught signal reloading", "signal", sig)
+
+					if err := s.Restart(); err != nil {
+						logger.WithError(err).Error("reloading failed")
+					}
+
+					logger.Info("reload complete")
+				default:
+					logger.Info("gracefully shutting down", "signal", sig)
+					gracefulCh := make(chan struct{})
+					go func() {
+						ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+						defer cancel()
+						if err := s.Shutdown(ctx); err != nil {
+							logger.WithError(err).Error("unable to stop...")
+							return
+						}
+
+						close(gracefulCh)
+					}()
+
+					gracefulTimeout := 15 * time.Second
+					select {
+					case <-signalCh:
+						logger.Info("caught second signal. Exiting", "signal", sig)
+						os.Exit(1)
+					case <-time.After(gracefulTimeout):
+						logger.Error("graceful shutdown timed out. Exiting")
+						os.Exit(1)
+					case <-gracefulCh:
+						logger.Info("graceful exit complete")
+						os.Exit(0)
+					}
+				}
+			}
+
+			return nil
+		},
+	}
+)
+
+func init() {
+	cmdWeb.PersistentFlags().StringVarP(&webAddr, "addr", "a", webAddr, "address to service")
+}
