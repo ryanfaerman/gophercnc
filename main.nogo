@@ -1,0 +1,99 @@
+package main
+
+import (
+	"fmt"
+	"strconv"
+	"strings"
+)
+
+func stringifyFloat(f float64, precision int) string {
+	x := strconv.FormatFloat(f, 'f', precision, 64)
+
+	// Hacky way to remove silly zeroes
+	if strings.IndexRune(x, '.') != -1 {
+		for x[len(x)-1] == '0' {
+			x = x[:len(x)-1]
+		}
+		if x[len(x)-1] == '.' {
+			x = x[:len(x)-1]
+		}
+	}
+
+	return x
+}
+
+type Axis string
+
+const (
+	XAxis Axis = "X"
+	YAxis      = "Y"
+	ZAxis      = "Z"
+)
+
+type Position struct {
+	Axis  Axis
+	Value float64
+}
+
+func (p Position) String() string {
+	var out strings.Builder
+
+	out.WriteString(string(p.Axis))
+
+	return out.String()
+}
+
+type Program struct {
+	instructions []string
+}
+
+func (p *Program) AddInstruction(i string) {
+	p.instructions = append(p.instructions, i)
+}
+
+func (p *Program) Comment(m string) {
+	p.AddInstruction(fmt.Sprintf("; %s", m))
+}
+
+func (p *Program) UseAbsolutePosition() { p.AddInstruction("G90") }
+func (p *Program) UseMillimeters()      { p.AddInstruction("G21") }
+func (p *Program) SetPosition(x, y, z float64) {
+	p.AddInstruction(
+		fmt.Sprintf(
+			"G92 X%s Y%s Z%s",
+			stringifyFloat(x, 3),
+			stringifyFloat(y, 3),
+			stringifyFloat(z, 3),
+		),
+	)
+}
+
+func (p *Program) Stop(m string) { p.AddInstruction(fmt.Sprintf("M0 %s", m)) }
+
+func (p *Program) AutoHome(axes ...string) {
+	p.AddInstruction(fmt.Sprintf("G28 %s", strings.Join(axes, " ")))
+}
+
+func (p *Program) String() string {
+	var out strings.Builder
+
+	for _, i := range p.instructions {
+		out.WriteString(i)
+		out.WriteString("\n")
+	}
+
+	return out.String()
+}
+
+func main() {
+
+	p := &Program{}
+	p.Comment("Hello World")
+
+	p.UseAbsolutePosition()
+	p.UseMillimeters()
+	p.SetPosition(0, 0, 0)
+	p.Stop("Attach Z-Probe")
+
+	fmt.Println(p.String())
+}
