@@ -4,14 +4,17 @@ import (
 	"os"
 
 	"github.com/ryanfaerman/gophercnc/log"
+	"github.com/ryanfaerman/gophercnc/termrender"
 	"github.com/ryanfaerman/gophercnc/version"
 	"github.com/spf13/cobra"
 )
 
 var (
 	logger              = log.WithFields("app", "gophercnc")
+	renderer            = termrender.New()
 	globalLogLevel      = "info"
 	globalLogFormat     = "logfmt"
+	globalOutputFormat  = "table"
 	globalDisableColors = false
 
 	root = &cobra.Command{
@@ -38,6 +41,14 @@ var (
 				}
 			}
 
+			renderer.SetRenderFormat(termrender.FormatTable)
+			if f, err := termrender.ParseFormat(globalOutputFormat); err != nil {
+				logger.WithError(err).
+					Warn("got error when parsing output format, defaulting to TABLE")
+			} else {
+				renderer.SetRenderFormat(f)
+			}
+
 		},
 	}
 )
@@ -46,9 +57,13 @@ func init() {
 	root.PersistentFlags().StringVar(&globalLogLevel, "log-level", "info", "minimum level of logs to print to STDERR")
 	root.PersistentFlags().StringVar(&globalLogFormat, "log-format", "pretty", "show logs as: pretty, logfmt, json")
 	root.PersistentFlags().BoolVar(&globalDisableColors, "no-color", false, "disable colorized output")
+	root.PersistentFlags().StringVarP(&globalOutputFormat, "format", "f", globalOutputFormat, "output format")
+
 	root.AddCommand(
 		cmdVersion,
-		// cmdWeb,
+		cmdSuction,
+		cmdFacing,
+		cmdTools,
 	)
 }
 
