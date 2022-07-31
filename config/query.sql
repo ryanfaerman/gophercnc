@@ -1,23 +1,16 @@
-/* name: GetAuthor :one */ 
-SELECT * FROM authors
-WHERE id = ? LIMIT 1;
+/* name: AddToolLibrary :one */
+INSERT INTO resources (name, path, kind)
+VALUES(?1, ?2, "tool.library")
+RETURNING *;
 
-/* name: listauthors :many */
-SELECT * FROM authors
-ORDER BY name;
+/* name: ActiveToolLibrary :one */
+SELECT resources.name, resources.path FROM configs 
+JOIN resources ON configs.data = resources.name 
+WHERE configs.uri = "library.active";
 
-/* name: CreateAuthor :one */
-INSERT INTO authors (
-  name, bio
-) VALUES (
-  ?1, ?2
-) 
-RETURNING id;
+/* name: SetActiveLibrary :exec */
+INSERT INTO configs (uri, data) 
+VALUES("library.active", ?1)
+ON CONFLICT(uri) DO UPDATE 
+SET data = ?1;
 
-/* name: DeleteAuthor :exec */
-DELETE FROM authors
-WHERE id = ?;
-
-/* name: ActiveLibraries :many */
-SELECT * FROM libraries 
-WHERE active = true;

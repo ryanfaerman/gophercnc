@@ -1,11 +1,11 @@
-CREATE TABLE authors (
-  id   integer PRIMARY KEY AUTOINCREMENT,
-  name text      NOT NULL,
-  bio  text
+CREATE TABLE resources (
+  name text PRIMARY KEY,
+  path text,
+  format text,
+  kind text
 );
 
-CREATE TABLE libraries (
-  name text  PRIMARY KEY,
-  path text not null,
-  active bool DEFAULT false
-)
+CREATE TABLE configs (
+  uri text PRIMARY KEY,
+  data text
+);

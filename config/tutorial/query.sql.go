@@ -10,102 +10,55 @@ import (
 	"database/sql"
 )
 
-const activeLibraries = `-- name: ActiveLibraries :many
-SELECT name, path, active FROM libraries 
-WHERE active = true
+const activeToolLibrary = `-- name: ActiveToolLibrary :one
+SELECT resources.name, resources.path FROM configs 
+JOIN resources ON configs.data = resources.name 
+WHERE configs.uri = "library.active"
 `
 
-func (q *Queries) ActiveLibraries(ctx context.Context) ([]Library, error) {
-	rows, err := q.db.QueryContext(ctx, activeLibraries)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Library
-	for rows.Next() {
-		var i Library
-		if err := rows.Scan(&i.Name, &i.Path, &i.Active); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const createAuthor = `-- name: CreateAuthor :one
-INSERT INTO authors (
-  name, bio
-) VALUES (
-  ?1, ?2
-) 
-RETURNING id
-`
-
-type CreateAuthorParams struct {
+type ActiveToolLibraryRow struct {
 	Name string
-	Bio  sql.NullString
+	Path sql.NullString
 }
 
-func (q *Queries) CreateAuthor(ctx context.Context, arg CreateAuthorParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, createAuthor, arg.Name, arg.Bio)
-	var id int64
-	err := row.Scan(&id)
-	return id, err
-}
-
-const deleteAuthor = `-- name: DeleteAuthor :exec
-DELETE FROM authors
-WHERE id = ?
-`
-
-func (q *Queries) DeleteAuthor(ctx context.Context, id int64) error {
-	_, err := q.db.ExecContext(ctx, deleteAuthor, id)
-	return err
-}
-
-const getAuthor = `-- name: GetAuthor :one
-/* name: GetAuthor :one */ 
-SELECT id, name, bio FROM authors
-WHERE id = ? LIMIT 1
-`
-
-func (q *Queries) GetAuthor(ctx context.Context, id int64) (Author, error) {
-	row := q.db.QueryRowContext(ctx, getAuthor, id)
-	var i Author
-	err := row.Scan(&i.ID, &i.Name, &i.Bio)
+func (q *Queries) ActiveToolLibrary(ctx context.Context) (ActiveToolLibraryRow, error) {
+	row := q.db.QueryRowContext(ctx, activeToolLibrary)
+	var i ActiveToolLibraryRow
+	err := row.Scan(&i.Name, &i.Path)
 	return i, err
 }
 
-const listauthors = `-- name: listauthors :many
-SELECT id, name, bio FROM authors
-ORDER BY name
+const addToolLibrary = `-- name: AddToolLibrary :one
+INSERT INTO resources (name, path, kind)
+VALUES(?1, ?2, "tool.library")
+RETURNING name, path, format, kind
 `
 
-func (q *Queries) listauthors(ctx context.Context) ([]Author, error) {
-	rows, err := q.db.QueryContext(ctx, listauthors)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Author
-	for rows.Next() {
-		var i Author
-		if err := rows.Scan(&i.ID, &i.Name, &i.Bio); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+type AddToolLibraryParams struct {
+	Name string
+	Path sql.NullString
+}
+
+func (q *Queries) AddToolLibrary(ctx context.Context, arg AddToolLibraryParams) (Resource, error) {
+	row := q.db.QueryRowContext(ctx, addToolLibrary, arg.Name, arg.Path)
+	var i Resource
+	err := row.Scan(
+		&i.Name,
+		&i.Path,
+		&i.Format,
+		&i.Kind,
+	)
+	return i, err
+}
+
+const setActiveLibrary = `-- name: SetActiveLibrary :exec
+INSERT INTO configs (uri, data) 
+VALUES("library.active", ?1)
+ON CONFLICT(uri) DO UPDATE 
+SET data = ?1
+`
+
+func (q *Queries) SetActiveLibrary(ctx context.Context, data sql.NullString) error {
+	_, err := q.db.ExecContext(ctx, setActiveLibrary, data)
+	return err
 }

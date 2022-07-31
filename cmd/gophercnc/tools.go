@@ -8,7 +8,6 @@ import (
 	"log"
 	"os"
 
-	"github.com/davecgh/go-spew/spew"
 	_ "github.com/glebarez/go-sqlite"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/ryanfaerman/gophercnc/config/tutorial"
@@ -85,30 +84,27 @@ var (
 			// fmt.Println(version)
 
 			queries := tutorial.New(db)
+
+			// library, err := queries.AddToolLibrary(ctx, tutorial.AddToolLibraryParams{
+			// 	Name: "mpcnc2",
+			// 	Path: sql.NullString{String: "some/path", Valid: true},
+			// })
+			// if err != nil {
+			// 	return err
+			// }
+
+			// spew.Dump(library)
+
+			if err := queries.SetActiveLibrary(ctx, sql.NullString{String: "mpcnc", Valid: true}); err != nil {
+				return err
+			}
+
 			// list all authors
-			authors, err := queries.ListAuthors(ctx)
+			authors, err := queries.ActiveToolLibrary(ctx)
 			if err != nil {
 				return err
 			}
 			log.Println(authors)
-
-			// create an author
-			insertedAuthor, err := queries.CreateAuthor(ctx, tutorial.CreateAuthorParams{
-				Name: "Brian Kernighan",
-				Bio:  sql.NullString{String: "Co-author of The C Programming Language and The Go Programming Language", Valid: true},
-			})
-			if err != nil {
-				return err
-			}
-			log.Println(insertedAuthor)
-
-			// get the author we just inserted
-			fetchedAuthor, err := queries.GetAuthor(ctx, insertedAuthor)
-			if err != nil {
-				return err
-			}
-
-			spew.Dump(fetchedAuthor)
 
 			return nil
 		},

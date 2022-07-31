@@ -8,14 +8,14 @@ import (
 	"database/sql"
 )
 
-type Author struct {
-	ID   int64
-	Name string
-	Bio  sql.NullString
+type Config struct {
+	Uri  string
+	Data sql.NullString
 }
 
-type Library struct {
+type Resource struct {
 	Name   string
-	Path   string
-	Active sql.NullBool
+	Path   sql.NullString
+	Format sql.NullString
+	Kind   sql.NullString
 }
