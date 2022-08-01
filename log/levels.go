@@ -21,6 +21,7 @@ const (
 	LevelInfo               // info
 	LevelWarn               // warn
 	LevelError              // error
+	LevelFatal              // fatal
 )
 
 // ParseLevel parses a string, matching it to a Level. If the input fails to
@@ -35,6 +36,8 @@ func ParseLevel(in string) (Level, error) {
 		return LevelWarn, nil
 	case "error":
 		return LevelError, nil
+	case "fatal":
+		return LevelFatal, nil
 	default:
 		return LevelInfo, errors.New(fmt.Sprintf("cannot parse %s as a log level", in))
 	}

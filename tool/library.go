@@ -4,9 +4,14 @@ import (
 	"archive/zip"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+
+	"github.com/ryanfaerman/gophercnc/config"
+	"github.com/segmentio/ksuid"
 )
 
 type Library struct {
@@ -23,17 +28,19 @@ func (l Library) FindByNumber(n int) (Tool, error) {
 	return Tool{}, errors.New("Tool Not Found")
 }
 
-func LoadLibrary(path string) (Library, error) {
+func IsValidLibrary(path string) bool {
 	stat, err := os.Stat(path)
 	if err != nil {
-		return Library{}, err
+		return false
 	}
-	if stat.IsDir() {
-		return Library{}, errors.New("Library is directory")
-	}
+	return !stat.IsDir()
+}
 
-	// if not file, return error
-	// if not exists, return error
+func LoadLibrary(path string) (Library, error) {
+
+	if !IsValidLibrary(path) {
+		return Library{}, errors.New("invalid library")
+	}
 
 	switch filepath.Ext(path) {
 	case ".tools":
@@ -78,9 +85,94 @@ func LoadLibrary(path string) (Library, error) {
 	return Library{}, errors.New("unsupported library file")
 }
 
-/*
+func ImportLibrary(name, path string) error {
+	l := config.Logger.WithFields("fn", "tool.ImportLibrary")
 
-tool.LoadLibrary(somepath) => Library
-tool.LoadLibrary(anotherPath) => Library
+	if err := CleanLibraryCache(); err != nil {
+		return err
+	}
+	_, err := LoadLibrary(path)
+	if err != nil {
+		return err
+	}
 
-*/
+	src, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+
+	targetName := ksuid.New().String() + filepath.Ext(path)
+	targetPath := filepath.Join(config.LibraryCachePath(), targetName)
+
+	if err := os.MkdirAll(config.LibraryCachePath(), 0750); err != nil {
+		return err
+	}
+
+	dst, err := os.Create(targetPath)
+	if err != nil {
+		return err
+	}
+	defer dst.Close()
+
+	l.Debug("copying tool library to cache", "src", path, "dst", targetPath)
+	if _, err := io.Copy(dst, src); err != nil {
+		return err
+	}
+
+	l.Debug("adding library to config", "name", name)
+
+	if err := config.AddLibrary(name, targetPath); err != nil {
+
+		return fmt.Errorf("Cannot import library; %w", err)
+	}
+
+	return nil
+
+}
+
+// CleanLibraryCache compares the libraries on disk to the ones we have
+// configured. It then removes any on disk from the cache that aren't
+// present in the config.
+//
+// If there are any libaries in the config that don't exist on disk, they are
+// removed from the config.
+func CleanLibraryCache() error {
+	l := config.Logger.WithFields("fn", "tool.CleanLibraryCache")
+
+	l.Debug("loading stored libraries")
+	libs, err := config.Libraries()
+	if err != nil {
+		return err
+	}
+
+	validPaths := make(map[string]string)
+
+	for _, lib := range libs {
+		validPaths[filepath.Base(lib.Path)] = lib.Name
+
+		if _, err := os.Stat(lib.Path); os.IsNotExist(err) {
+			l.Warn("removing invalid library from the config", "name", lib.Name, "path", lib.Path)
+			if err := config.RemoveLibrary(lib.Name); err != nil {
+				l.WithError(err).Error("cannot remove invalid library", "name", lib.Name)
+			}
+
+		}
+	}
+
+	l.Debug("Reading library cache", "path", config.LibraryCachePath())
+	files, err := ioutil.ReadDir(config.LibraryCachePath())
+	if err != nil {
+		return err
+	}
+
+	for _, f := range files {
+		if _, ok := validPaths[f.Name()]; !ok {
+			path := filepath.Join(config.LibraryCachePath(), f.Name())
+			l.Warn("removing orphan library", "path", path)
+			os.Remove(path)
+		}
+	}
+
+	return nil
+}

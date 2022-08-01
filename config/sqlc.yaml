@@ -1,7 +1,7 @@
 version: 1
 packages:
-  - path: "tutorial"
-    name: "tutorial"
+  - path: "data"
+    name: "data"
     engine: "sqlite"
-    schema: "schema.sql"
+    schema: "migrations/20220731222412_create_config.sql"
     queries: "query.sql"

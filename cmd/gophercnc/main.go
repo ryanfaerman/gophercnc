@@ -3,14 +3,19 @@ package main
 import (
 	"os"
 
+	"github.com/ryanfaerman/gophercnc/config"
 	"github.com/ryanfaerman/gophercnc/log"
 	"github.com/ryanfaerman/gophercnc/termrender"
 	"github.com/ryanfaerman/gophercnc/version"
 	"github.com/spf13/cobra"
 )
 
+const (
+	ApplicationName = "gophercnc"
+)
+
 var (
-	logger              = log.WithFields("app", "gophercnc")
+	logger              = log.WithFields("app", ApplicationName)
 	renderer            = termrender.New()
 	globalLogLevel      = "info"
 	globalLogFormat     = "logfmt"
@@ -49,6 +54,10 @@ var (
 				renderer.SetRenderFormat(f)
 			}
 
+			config.Logger = logger
+			config.ApplicationName = ApplicationName
+			config.Load()
+
 		},
 	}
 )
@@ -64,6 +73,7 @@ func init() {
 		cmdSuction,
 		cmdFacing,
 		cmdTools,
+		cmdConfig,
 	)
 }
 

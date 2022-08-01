@@ -1,6 +1,7 @@
 package log
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -64,6 +65,18 @@ func (l Logger) WithError(err error) Logger {
 	return l.WithFields("err", err.Error())
 }
 
+// Print emits a log at the current level
+func (l Logger) Print(args ...interface{}) { l.log(LevelDebug, args) }
+
+// Printf emits a formattable log at the current level
+func (l Logger) Printf(format string, args ...any) {
+	l.Print(fmt.Sprintf(format, args...))
+}
+
+// Println emits a log at the current level. This is a shim to comply with the
+// Log interface from the stdlib
+func (l Logger) Println(args ...any) { l.Print(args...) }
+
 // Debug emits logs when the set level is Debug or lower
 func (l Logger) Debug(args ...interface{}) { l.log(LevelDebug, args) }
 
@@ -76,11 +89,21 @@ func (l Logger) Warn(args ...interface{}) { l.log(LevelWarn, args) }
 // Error emits logs when the set level is Error or lower
 func (l Logger) Error(args ...interface{}) { l.log(LevelError, args) }
 
+// Fatal emits logs when the set level is Fatal or lower
+func (l Logger) Fatal(args ...interface{}) { l.log(LevelFatal, args) }
+
+func (l Logger) Fatalf(format string, args ...interface{}) {
+	l.Fatal(fmt.Sprintf(format, args...))
+}
+
 func (l Logger) log(lvl Level, args []interface{}) {
 	if l.Out == nil {
 		l.Out = os.Stderr
 	}
 	if l.Level <= lvl {
 		lvl.Log(l.Out, append(args, l.fields...)...)
+	}
+	if l.Level == LevelFatal {
+		os.Exit(1)
 	}
 }
