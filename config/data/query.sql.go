@@ -51,6 +51,33 @@ func (q *Queries) AddToolLibrary(ctx context.Context, arg AddToolLibraryParams) 
 	return i, err
 }
 
+const configs = `-- name: Configs :many
+SELECT uri, data FROM configs
+`
+
+func (q *Queries) Configs(ctx context.Context) ([]Config, error) {
+	rows, err := q.db.QueryContext(ctx, configs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Config
+	for rows.Next() {
+		var i Config
+		if err := rows.Scan(&i.Uri, &i.Data); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const findResourceByName = `-- name: FindResourceByName :one
 SELECT name, path, format, kind FROM resources
 WHERE name = ?
@@ -149,4 +176,13 @@ func (q *Queries) ToolLibraries(ctx context.Context) ([]Resource, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const unsetConfig = `-- name: UnsetConfig :exec
+DELETE FROM configs WHERE uri=?
+`
+
+func (q *Queries) UnsetConfig(ctx context.Context, uri string) error {
+	_, err := q.db.ExecContext(ctx, unsetConfig, uri)
+	return err
 }

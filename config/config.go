@@ -14,11 +14,15 @@ import (
 )
 
 var (
-	defaults = map[string]string{
+	ApplicationName = "gophercnc"
+	defaults        = map[string]string{
 		"cache.path":   "",
 		"library.path": "",
 	}
-	ApplicationName = "gophercnc"
+	protected = []string{
+		"cache.path",
+		"library.path",
+	}
 
 	c      config
 	Logger log.Logger
@@ -99,7 +103,7 @@ func (c *config) Load(path string) error {
 
 		err = c.SetDefaults()
 
-		if err != nil {
+		if err == nil {
 			c.loaded = true
 		}
 

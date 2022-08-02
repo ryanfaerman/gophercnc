@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 )
@@ -23,6 +24,13 @@ func Set(uri, data string) error {
 	if !c.loaded {
 		return errors.New("config is not loaded")
 	}
+
+	for _, p := range protected {
+		if p == uri {
+			return fmt.Errorf("uri '%s' is reserved/protected", uri)
+		}
+	}
+
 	return c.Set(uri, data)
 }
 func Get(uri string) (string, error) {
@@ -32,7 +40,26 @@ func Get(uri string) (string, error) {
 	return c.Get(uri)
 }
 
-// func ToolLibrary() (tool.Library, error) { return c.ToolLibrary() }
+func GetAll() ([]ConfigOption, error) {
+
+	if !c.loaded {
+		return []ConfigOption{}, errors.New("config is not loaded")
+	}
+	return c.GetAll()
+}
+
+func Unset(uri string) error {
+	if !c.loaded {
+		return errors.New("config is not loaded")
+	}
+	for _, p := range protected {
+		if p == uri {
+			return fmt.Errorf("uri '%s' is reserved/protected", uri)
+		}
+	}
+	return c.Unset(uri)
+}
+
 func Close() error { return c.Close() }
 
 // Library-related Sweets

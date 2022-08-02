@@ -108,7 +108,7 @@ var (
 		Use:     "activate",
 		Short:   "mark a libary as active",
 		Aliases: []string{"use"},
-		Args:    cobra.MinimumNArgs(1),
+		Args:    cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			return config.ActivateLibrary(args[0])
 		},

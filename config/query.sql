@@ -34,3 +34,9 @@ SET data = ?2;
 /* name: GetConfig :one */
 SELECT data FROM configs 
 WHERE uri = ?;
+
+/* name: Configs :many */
+SELECT * FROM configs;
+
+/* name: UnsetConfig :exec */
+DELETE FROM configs WHERE uri=?;
