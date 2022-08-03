@@ -72,7 +72,7 @@ func Command(address Addressable, v float64, accepts ...Addressable) commandFunc
 
 var PanicOnLimitFailure bool
 
-func Limit(c commandFunc, limits ...Parameter) commandFunc {
+func LimitCommand(c commandFunc, limits ...Parameter) commandFunc {
 	if len(limits)%2 == 1 {
 		if PanicOnLimitFailure {
 			panic("must have even number of limits")
@@ -116,6 +116,20 @@ func Limit(c commandFunc, limits ...Parameter) commandFunc {
 		}
 
 		return c(params...)
+	}
+}
+
+func LimitCode(c codeFunc, min float64, max float64) codeFunc {
+
+	return func(value float64) code {
+		if value < min {
+			value = min
+		}
+		if value > max {
+			value = max
+		}
+
+		return c(value)
 	}
 }
 

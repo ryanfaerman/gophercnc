@@ -70,11 +70,10 @@ func (c code) String() string {
 }
 
 func Code(address byte) codeFunc {
-	return func(v float64, params ...code) code {
+	return func(v float64) code {
 		return code{
 			address: address,
 			value:   v,
-			codes:   params,
 		}
 	}
 }
@@ -94,7 +93,7 @@ func Argument(address byte) stringFunc {
 	}
 }
 
-type codeFunc func(float64, ...code) code
+type codeFunc func(float64) code
 
 func (cf codeFunc) Address() byte {
 	return cf(0.0).address
