@@ -70,10 +70,11 @@ func init() {
 
 	root.AddCommand(
 		cmdVersion,
-		cmdSuction,
-		cmdFacing,
+		// cmdSuction,
+		// cmdFacing,
 		cmdTools,
 		cmdConfig,
+		cmdCode,
 	)
 }
 

@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/alexeyco/simpletable v1.0.0
+	github.com/davecgh/go-spew v1.1.1
 	github.com/fatih/structs v1.1.0
 	github.com/glebarez/go-sqlite v1.17.3
 	github.com/kr/logfmt v0.0.0-20210122060352-19f9bcb100e6
