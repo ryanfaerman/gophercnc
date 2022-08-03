@@ -5,6 +5,8 @@ import (
 	"strings"
 )
 
+var Precision = 2
+
 type Addressable interface {
 	Address() byte
 }
@@ -18,6 +20,17 @@ type Parameter interface {
 	Valuable
 }
 
+// code is the underlying _thing_ that holds all the actual important bits.
+// This is a common tool to represent any of the various codes (Z,G, etc). It
+// can track what it will accept as a parameter, and most importantly, it can
+// turn itself into GCode strings for consumption by an actual machine of some
+// sort.
+//
+// It does this in a generic way without concern to the 'flavor' of gcode in
+// use. There are a few non-standard character classes (that address: a, z, g,
+// etc.). These are used to denote that we have a non-gcode item. Namely, the
+// ';' address indicates we have a comment. The '_' address indicates a string.
+//
 type code struct {
 	address byte
 	value   float64
@@ -69,6 +82,9 @@ func (c code) String() string {
 	return b.String()
 }
 
+// Code creates a code func for the given address. For example: `banana :
+// =Code('X')` returns a code function, `banana()` that can be used to
+// represent an X code in the final output.
 func Code(address byte) codeFunc {
 	return func(v float64) code {
 		return code{
@@ -84,6 +100,9 @@ func (sf stringFunc) Address() byte {
 	return sf("").address
 }
 
+// Argument is similar to Code, but rather than have a function that takes a
+// float64 as its value, it accepts a string. This way you can have commands
+// like M400 that optionally have a string value to write to an LCD.
 func Argument(address byte) stringFunc {
 	return func(s string) code {
 		return code{
