@@ -39,21 +39,35 @@ type code struct {
 	comment string
 }
 
-func (c code) Address() byte  { return c.address }
-func (c code) Arity() int     { return len(c.codes) }
-func (c code) Value() float64 { return c.value }
+type mapKey struct {
+	addr byte
+	val  float64
+}
+
+func (c code) Address() byte      { return c.address }
+func (c code) Arity() int         { return len(c.codes) }
+func (c code) Value() float64     { return c.value }
+func (c code) Parameters() []code { return c.codes }
+func (c code) Key() mapKey {
+	return mapKey{
+		addr: c.address,
+		val:  c.value,
+	}
+}
 
 func (c code) String() string {
 	var b strings.Builder
 
 	switch c.address {
-	case '_':
+	case String.Address():
 		b.WriteString(c.comment)
 		return b.String()
-	case ';':
+	case Comment.Address():
 		b.WriteString("; ")
 		b.WriteString(c.comment)
 		return b.String()
+	case Finalizer.Address(), Initializer.Address():
+		return ""
 	default:
 		b.WriteByte(c.address)
 

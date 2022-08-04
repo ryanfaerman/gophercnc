@@ -31,3 +31,13 @@ var (
 	String  = Argument('_')
 	Comment = Argument(';')
 )
+
+var (
+	Initializer = code{
+		address: '0',
+	}
+
+	Finalizer = code{
+		address: '$',
+	}
+)
