@@ -75,6 +75,7 @@ func init() {
 		cmdTools,
 		cmdConfig,
 		cmdCode,
+		cmdCodeParse,
 	)
 }
 

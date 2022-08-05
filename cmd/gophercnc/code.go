@@ -2,10 +2,13 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/ryanfaerman/gophercnc/config"
 	"github.com/ryanfaerman/gophercnc/gcode"
 	. "github.com/ryanfaerman/gophercnc/gcode/marlin"
+	"github.com/ryanfaerman/gophercnc/tool"
 	"github.com/spf13/cobra"
 )
 
@@ -45,27 +48,56 @@ var (
 				G28(Flag("Z")),
 				M600(T(3)),
 			)
+			active, err := config.ActiveLibrary()
+			if err != nil {
+				return err
+			}
+			lib, err := tool.LoadLibrary(active.Path)
+			if err != nil {
+				return err
+			}
+
+			fmt.Println(lib)
 
 			doc.AddHook(M600, func(c gcode.CodePoint) gcode.Fragment {
-				fmt.Println("bananas in pajamas")
-				spew.Dump(c.Address())
-				spew.Dump(c.Arity())
+				fmt.Println("borsht")
+
+				// fmt.Println(c.String())
+
+				// spw := spew.ConfigState{ContinueOnMethod: true}
+				// spw.Dump(c)
+
+				t := 0
 				for _, p := range c.Parameters() {
 					fmt.Println("changing!:", p.String(), "tool:", p.Value())
+					t = int(p.Value())
 				}
+
+				tool, err := lib.FindByNumber(t)
+				if err != nil {
+					panic(err.Error())
+				}
+
 				return gcode.Fragment{
-					M0(String("Tool Change")),
+					M0(String(fmt.Sprintf("Change to: (%d) %s", tool.Number(), tool.Description))),
 					G0(X(900.0)),
 					G0(Y(90.8)),
 					M0(String("End tool change")),
 				}
 			})
 
+			setup := `
+			; Hello, this is my gcode file, there are many like it, 
+			; but this is mine
+			G92
+			G28
+			M117 Let's do this thing
+			G0 X12.3 Y45.6 Z19
+			`
+
 			doc.Initalizer(func(_ gcode.CodePoint) gcode.Fragment {
-				return nil
-				return gcode.Fragment{
-					Comment("This is a story, of a lovely lady!"),
-				}
+				frag, _ := gcode.ParseString(setup)
+				return frag
 			})
 
 			doc.Finalizer(func(_ gcode.CodePoint) gcode.Fragment {
@@ -77,6 +109,38 @@ var (
 			fmt.Println("DOCUMENT START")
 			fmt.Println(doc)
 			return nil
+		},
+	}
+	cmdCodeParse = &cobra.Command{
+		Use:   "parse",
+		Short: "code stuff",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			// const src = `
+			// ; COMMAND_SPINDLE_CLOCKWISE
+			// M0 Turn ON 5000RPM
+			// ; COMMAND_COOLANT_ON
+			// M117  Bore3 ; display message
+			// G0 Z15
+			// G0 X-24.237 Y0.635 F2500
+			// G0 Z1 F300
+			// `
+			const src = `
+			;COMMAND_SPINDLE_CLOCKWISE
+M400 Turn On 5000RPM ; Do the thing
+
+M28 X
+
+
+G0 X-24.237 Y0.635 F2500 ; Needful
+
+`
+
+			out, err := gcode.Parse(strings.NewReader(src))
+			fmt.Println("--- OUTPUT ---")
+			fmt.Println(out)
+
+			return err
+
 		},
 	}
 )

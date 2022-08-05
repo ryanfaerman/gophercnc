@@ -34,7 +34,7 @@ var (
 
 var (
 	Initializer = code{
-		address: '0',
+		address: '!',
 	}
 
 	Finalizer = code{

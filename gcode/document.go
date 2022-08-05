@@ -71,23 +71,23 @@ func (d *Document) AddFragment(f Fragment) {
 func (d *Document) String() string {
 	var out strings.Builder
 
-	execHook := func(key mapKey) bool {
+	execHook := func(p CodePoint) bool {
 		d.hooksLock.Lock()
 		defer d.hooksLock.Unlock()
 
-		fn, ok := d.hooks[key]
+		fn, ok := d.hooks[p.Key()]
 		if ok {
-			if frag := fn(Initializer); frag != nil {
+			if frag := fn(p); frag != nil {
 				out.WriteString(frag.String())
 			}
 		}
 		return ok
 	}
 
-	execHook(Initializer.Key())
+	execHook(Initializer)
 
 	for _, c := range d.lines {
-		if execHook(c.Key()) {
+		if execHook(c) {
 			continue
 		} else {
 			out.WriteString(c.String())
@@ -95,7 +95,7 @@ func (d *Document) String() string {
 		out.WriteString("\n")
 	}
 
-	execHook(Finalizer.Key())
+	execHook(Finalizer)
 
 	return out.String()
 }
