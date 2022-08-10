@@ -76,6 +76,7 @@ func init() {
 		cmdConfig,
 		cmdCode,
 		cmdCodeParse,
+		cmdMachine,
 	)
 }
 

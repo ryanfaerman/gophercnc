@@ -1,0 +1,11 @@
+name: "MPCNC"
+axes: []
+capabilities:
+  milling: true
+procedures:
+  M600: |
+    M117 Hello there
+    M400
+    G92 X
+    G28 X0.4
+    G0 X1.23 Y3.45 Z6.7

@@ -71,9 +71,32 @@ func LibraryCachePath() string {
 	}
 	return p
 }
-func Libraries() ([]Library, error)           { return c.Libraries() }
-func GetLibrary(name string) (Library, error) { return c.GetLibrary(name) }
-func AddLibrary(name, path string) error      { return c.AddLibrary(name, path) }
-func ActivateLibrary(name string) error       { return c.ActivateLibrary(name) }
-func ActiveLibrary() (Library, error)         { return c.ActiveLibrary() }
-func RemoveLibrary(name string) error         { return c.RemoveLibrary(name) }
+
+// func Libraries() ([]Library, error)           { return c.Libraries() }
+// func GetLibrary(name string) (Library, error) { return c.GetLibrary(name) }
+// func AddLibrary(name, path string) error { return c.AddLibrary(name, path) }
+// func ActivateLibrary(name string) error { return c.ActivateLibrary(name) }
+// func ActiveLibrary() (Library, error) { return c.ActiveLibrary() }
+// func RemoveLibrary(name string) error { return c.RemoveLibrary(name) }
+
+func Libraries() ([]Resource, error)           { return c.FindResourceByKind("tool.library") }
+func GetLibrary(name string) (Resource, error) { return c.FindResourceByNameKind(name, "tool.library") }
+func AddLibrary(name, path string) error       { return c.AddResource(name, path, "tool.library") }
+func ActivateLibrary(name string) error        { return c.ActivateResource(name, "tool.library") }
+func ActiveLibrary() (Resource, error)         { return c.ActiveResource("tool.library") }
+func RemoveLibrary(name string) error          { return c.RemoveResource(name, "tool.library") }
+
+// Machine-related Sweets
+func MachineCachePath() string {
+	p, err := c.Get("machine.path")
+	if err != nil {
+		panic(err.Error())
+	}
+	return p
+}
+func Machines() ([]Resource, error)            { return c.FindResourceByKind("machine") }
+func GetMachine(name string) (Resource, error) { return c.FindResourceByNameKind(name, "machine") }
+func AddMachine(name, path string) error       { return c.AddResource(name, path, "machine") }
+func ActivateMachine(name string) error        { return c.ActivateResource(name, "machine") }
+func ActiveMachine() (Resource, error)         { return c.ActiveResource("machine") }
+func RemoveMachine(name string) error          { return c.RemoveResource(name, "machine") }

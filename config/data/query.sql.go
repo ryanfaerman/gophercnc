@@ -10,44 +10,26 @@ import (
 	"database/sql"
 )
 
-const activeToolLibrary = `-- name: ActiveToolLibrary :one
+const activeResource = `-- name: ActiveResource :one
 SELECT resources.name, resources.path FROM configs 
 JOIN resources ON configs.data = resources.name 
-WHERE configs.uri = "library.active"
+WHERE configs.uri = ? AND resources.kind = ?
 `
 
-type ActiveToolLibraryRow struct {
+type ActiveResourceParams struct {
+	Uri  string
+	Kind sql.NullString
+}
+
+type ActiveResourceRow struct {
 	Name string
 	Path sql.NullString
 }
 
-func (q *Queries) ActiveToolLibrary(ctx context.Context) (ActiveToolLibraryRow, error) {
-	row := q.db.QueryRowContext(ctx, activeToolLibrary)
-	var i ActiveToolLibraryRow
+func (q *Queries) ActiveResource(ctx context.Context, arg ActiveResourceParams) (ActiveResourceRow, error) {
+	row := q.db.QueryRowContext(ctx, activeResource, arg.Uri, arg.Kind)
+	var i ActiveResourceRow
 	err := row.Scan(&i.Name, &i.Path)
-	return i, err
-}
-
-const addToolLibrary = `-- name: AddToolLibrary :one
-INSERT INTO resources (name, path, kind)
-VALUES(?1, ?2, "tool.library")
-RETURNING name, path, format, kind
-`
-
-type AddToolLibraryParams struct {
-	Name string
-	Path sql.NullString
-}
-
-func (q *Queries) AddToolLibrary(ctx context.Context, arg AddToolLibraryParams) (Resource, error) {
-	row := q.db.QueryRowContext(ctx, addToolLibrary, arg.Name, arg.Path)
-	var i Resource
-	err := row.Scan(
-		&i.Name,
-		&i.Path,
-		&i.Format,
-		&i.Kind,
-	)
 	return i, err
 }
 
@@ -78,15 +60,113 @@ func (q *Queries) Configs(ctx context.Context) ([]Config, error) {
 	return items, nil
 }
 
-const findResourceByName = `-- name: FindResourceByName :one
-SELECT name, path, format, kind FROM resources
-WHERE name = ?
+const createResource = `-- name: CreateResource :one
+INSERT INTO resources (name, path, kind)
+VALUES(?1, ?2, ?3)
+RETURNING id, name, path, format, kind
 `
 
-func (q *Queries) FindResourceByName(ctx context.Context, name string) (Resource, error) {
-	row := q.db.QueryRowContext(ctx, findResourceByName, name)
+type CreateResourceParams struct {
+	Name string
+	Path sql.NullString
+	Kind sql.NullString
+}
+
+func (q *Queries) CreateResource(ctx context.Context, arg CreateResourceParams) (Resource, error) {
+	row := q.db.QueryRowContext(ctx, createResource, arg.Name, arg.Path, arg.Kind)
 	var i Resource
 	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Path,
+		&i.Format,
+		&i.Kind,
+	)
+	return i, err
+}
+
+const findResource = `-- name: FindResource :many
+SELECT id, name, path, format, kind FROM resources
+`
+
+func (q *Queries) FindResource(ctx context.Context) ([]Resource, error) {
+	rows, err := q.db.QueryContext(ctx, findResource)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Resource
+	for rows.Next() {
+		var i Resource
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Path,
+			&i.Format,
+			&i.Kind,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const findResourceByKind = `-- name: FindResourceByKind :many
+SELECT id, name, path, format, kind FROM resources
+WHERE kind = ?
+`
+
+func (q *Queries) FindResourceByKind(ctx context.Context, kind sql.NullString) ([]Resource, error) {
+	rows, err := q.db.QueryContext(ctx, findResourceByKind, kind)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Resource
+	for rows.Next() {
+		var i Resource
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Path,
+			&i.Format,
+			&i.Kind,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const findResourceByNameByKind = `-- name: FindResourceByNameByKind :one
+SELECT id, name, path, format, kind FROM resources
+WHERE name = ? AND kind = ?
+`
+
+type FindResourceByNameByKindParams struct {
+	Name string
+	Kind sql.NullString
+}
+
+func (q *Queries) FindResourceByNameByKind(ctx context.Context, arg FindResourceByNameByKindParams) (Resource, error) {
+	row := q.db.QueryRowContext(ctx, findResourceByNameByKind, arg.Name, arg.Kind)
+	var i Resource
+	err := row.Scan(
+		&i.ID,
 		&i.Name,
 		&i.Path,
 		&i.Format,
@@ -108,23 +188,16 @@ func (q *Queries) GetConfig(ctx context.Context, uri string) (sql.NullString, er
 }
 
 const removeResource = `-- name: RemoveResource :exec
-DELETE FROM resources WHERE name=?
+DELETE FROM resources WHERE name=? AND kind = ?
 `
 
-func (q *Queries) RemoveResource(ctx context.Context, name string) error {
-	_, err := q.db.ExecContext(ctx, removeResource, name)
-	return err
+type RemoveResourceParams struct {
+	Name string
+	Kind sql.NullString
 }
 
-const setActiveLibrary = `-- name: SetActiveLibrary :exec
-INSERT INTO configs (uri, data) 
-VALUES("library.active", ?1)
-ON CONFLICT(uri) DO UPDATE 
-SET data = ?1
-`
-
-func (q *Queries) SetActiveLibrary(ctx context.Context, data sql.NullString) error {
-	_, err := q.db.ExecContext(ctx, setActiveLibrary, data)
+func (q *Queries) RemoveResource(ctx context.Context, arg RemoveResourceParams) error {
+	_, err := q.db.ExecContext(ctx, removeResource, arg.Name, arg.Kind)
 	return err
 }
 
@@ -143,39 +216,6 @@ type SetConfigParams struct {
 func (q *Queries) SetConfig(ctx context.Context, arg SetConfigParams) error {
 	_, err := q.db.ExecContext(ctx, setConfig, arg.Uri, arg.Data)
 	return err
-}
-
-const toolLibraries = `-- name: ToolLibraries :many
-SELECT name, path, format, kind FROM resources
-WHERE kind = "tool.library"
-`
-
-func (q *Queries) ToolLibraries(ctx context.Context) ([]Resource, error) {
-	rows, err := q.db.QueryContext(ctx, toolLibraries)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Resource
-	for rows.Next() {
-		var i Resource
-		if err := rows.Scan(
-			&i.Name,
-			&i.Path,
-			&i.Format,
-			&i.Kind,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const unsetConfig = `-- name: UnsetConfig :exec

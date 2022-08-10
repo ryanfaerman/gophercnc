@@ -112,10 +112,14 @@ func (d *Document) addHook(k mapKey, fn HookFn) {
 
 }
 
+type Keyable interface {
+	Key() mapKey
+}
+
 // AddHook sets the hook function for the given command. There can only be one
 // hook per command.
-func (d *Document) AddHook(cf commandFunc, fn HookFn) { d.addHook(cf().Key(), fn) }
-func (d *Document) Initalizer(fn HookFn)              { d.addHook(Initializer.Key(), fn) }
-func (d *Document) Finalizer(fn HookFn)               { d.addHook(Finalizer.Key(), fn) }
+func (d *Document) AddHook(cf Keyable, fn HookFn) { d.addHook(cf.Key(), fn) }
+func (d *Document) Initalizer(fn HookFn)          { d.addHook(Initializer.Key(), fn) }
+func (d *Document) Finalizer(fn HookFn)           { d.addHook(Finalizer.Key(), fn) }
 
 type CodePoint = code

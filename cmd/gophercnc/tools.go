@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	_ "github.com/glebarez/go-sqlite"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/ryanfaerman/gophercnc/config"
@@ -28,6 +30,7 @@ var (
 				err  error
 			)
 			if toolsLibraryPath == "" {
+				fmt.Println("upup")
 				active, err := config.ActiveLibrary()
 				if err != nil {
 					return err
@@ -40,6 +43,8 @@ var (
 					return err
 				}
 			}
+
+			fmt.Println(path)
 
 			lib, err := tool.LoadLibrary(path)
 

@@ -121,7 +121,6 @@ func ImportLibrary(name, path string) error {
 	}
 
 	l.Debug("adding library to config", "name", name)
-
 	if err := config.AddLibrary(name, targetPath); err != nil {
 
 		return fmt.Errorf("Cannot import library; %w", err)

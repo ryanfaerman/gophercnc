@@ -18,10 +18,12 @@ var (
 	defaults        = map[string]string{
 		"cache.path":   "",
 		"library.path": "",
+		"machine.path": "",
 	}
 	protected = []string{
 		"cache.path",
 		"library.path",
+		"machine.path",
 	}
 
 	c      config
@@ -40,6 +42,7 @@ func init() {
 	}
 	defaults["cache.path"] = filepath.Join(cache, "gophercnc")
 	defaults["library.path"] = filepath.Join(defaults["cache.path"], "libraries")
+	defaults["machine.path"] = filepath.Join(defaults["cache.path"], "machines")
 
 }
 

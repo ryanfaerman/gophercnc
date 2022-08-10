@@ -8,6 +8,13 @@ func (cf commandFunc) Value() float64 {
 	return cf().value
 }
 
+func (cf commandFunc) Key() mapKey {
+	return mapKey{
+		addr: cf.Address(),
+		val:  cf.Value(),
+	}
+}
+
 // Command is a slightly higher order GCode, that is, one that can accept
 // arguments/parameters. This function will generate a function for creating
 // functions (trippy, I know), that allows you to define what commands are
